@@ -4,6 +4,12 @@ SUSE product documentation for Runtime Enforcer, authored with https://antora.or
 
 == Structure
 
+All version need an identical structure. To create a new version, copy the
+`version-0.7` directory to say, `version-0.8` and update the `antora.yml` file
+to reflect the new version. The latest `antora.yml` would generally contain a
+prerelease tag, you would want to remove that from the version just copied. So,
+that becomes the release.
+
 [source]
 ----
 docs/
@@ -14,9 +20,13 @@ docs/
       nav.adoc                 # navigation tree
       pages/                   # AsciiDoc pages (source of the docs)
       images/                  # image assets
-      examples/                # example manifests and CRD generation tooling
       partials/                # reusable AsciiDoc partials
 ----
+
+== Development
+
+* Fork your own copy of `git@github.com/rancher/runtime-enforcer-product-docs.git`, if intending to contribute.
+* `git clone --recurse-submodules git@github.com/<your-gh-handle>/runtime-enforcer-product-docs.git`
 
 == Building locally
 
@@ -24,8 +34,11 @@ Install dependencies and generate the site:
 
 [source,bash]
 ----
-npm install
-npx antora --fetch runtime-enforcer-local-playbook.yml
+make clean
+make environment
+make local
+make preview
 ----
 
-The generated site is written to `build/site`.
+The generated site is in `build/site`. A build log is in `tmp`. Check for error,
+warning and info messsages.
