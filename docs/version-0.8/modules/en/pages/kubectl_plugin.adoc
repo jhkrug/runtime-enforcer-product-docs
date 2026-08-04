@@ -67,17 +67,17 @@ chmod +x kubectl_complete-runtime_enforcer
 sudo mv kubectl_complete-runtime_enforcer /usr/local/bin/
 ----
 
-=== Promote a proposal (Learn → Monitor)
+=== Promote a proposal
 
 Promoting a `WorkloadPolicyProposal` sets the
-`security.rancher.io/policy-ready=true` label and lets the controller create a
-`WorkloadPolicy`.
+`security.rancher.io/promote` label to the corresponding value
+(`monitor`/`protect`) and lets the controller create a `WorkloadPolicy`.
 
 *Plugin:*
 
 [source,bash]
 ----
-kubectl runtime-enforcer proposal promote <PROPOSAL_NAME> -n <namespace>
+kubectl runtime-enforcer proposal promote <PROPOSAL_NAME> -n <namespace> --mode <monitor|protect>
 ----
 
 Use `kubectl runtime-enforcer proposal promote --dry-run` to validate without
