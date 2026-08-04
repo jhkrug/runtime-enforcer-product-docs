@@ -274,10 +274,10 @@ The syntax is similar to the proposal, but there is one important
 difference: the `spec.mode: monitor` field. `monitor` is a passive mode:
 violations of the executable list are reported but not blocked. This means that
 if a process other than `bash`, `ls`, or `sleep` is executed, it's reported as
-an OTEL event, but it won't be blocked.
-Here the proposal is promoted in `monitor` mode but it is still possible to
+an OTEL event, but it isn't blocked.
+Here the proposal is promoted in `monitor` mode but you can
 promote a proposal directly in `protect` mode. In that case the enforcement
-would be applied immediately, blocking any disallowed executables from running.
+is applied immediately, blocking any disallowed executables from running.
 See the `protect` mode section for details.
 
 [NOTE]
@@ -382,6 +382,7 @@ status:
 
 - `violationCount` is the total number of violations that have occurred for this policy; it is a historical count.
 - `activeViolationCount` is the number of currently active violations for this policy.
+
 At this point, both are 1 because a single violation has been recorded.
 
 [NOTE]
