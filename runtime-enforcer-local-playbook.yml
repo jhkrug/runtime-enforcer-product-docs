@@ -1,6 +1,6 @@
 site:
   title: Runtime Enforcer
-  start_page: 0.7@runtime-enforcer:en:introduction.adoc
+  start_page: 0.8@runtime-enforcer:en:introduction.adoc
 
 content:
   sources:
