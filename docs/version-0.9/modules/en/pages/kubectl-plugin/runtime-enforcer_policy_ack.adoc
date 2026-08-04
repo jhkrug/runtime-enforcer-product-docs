@@ -1,23 +1,19 @@
-= runtime-enforcer proposal promote
+= runtime-enforcer policy ack
 :revdate: 2026-08-04
 :page-revdate: {revdate}
 
-Promote WorkloadPolicyProposal to WorkloadPolicy
-
-== Synopsis
-
-Promote WorkloadPolicyProposal to WorkloadPolicy. This will trigger the creation of a WorkloadPolicy.
+Acknowledge a WorkloadPolicy violation
 
 ....
-runtime-enforcer proposal promote PROPOSAL_NAME [flags]
+runtime-enforcer policy ack POLICY_NAME <violation-id> [--reason <reason>] [flags]
 ....
 
 == Options
 
 ....
-      --dry-run   Show what would happen without making any changes
-  -h, --help      help for promote
-      --mode string   Policy mode for the promoted WorkloadPolicy (monitor or protect) (default "monitor")
+      --dry-run         Show what would happen without making any changes
+  -h, --help            help for ack
+      --reason string   Reason for acknowledging the violation. If omitted, you will be prompted
 ....
 
 == Options inherited from parent commands
@@ -46,4 +42,4 @@ runtime-enforcer proposal promote PROPOSAL_NAME [flags]
 
 == SEE ALSO
 
-* xref:kubectl-plugin/runtime-enforcer_proposal.adoc[runtime-enforcer proposal] - Manage WorkloadPolicyProposal
+* xref:kubectl-plugin/runtime-enforcer_policy.adoc[runtime-enforcer policy] - Manage WorkloadPolicy

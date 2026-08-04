@@ -142,7 +142,32 @@ Let's create a fresh new openSUSE Deployment.
 
 [source,bash]
 ----
-kubectl apply -f https://raw.githubusercontent.com/rancher-sandbox/runtime-enforcer/main/docs/yaml/opensuse-deployment.yaml
+kubectl apply -f - <<EOF
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opensuse-deployment
+  labels:
+    app: opensuse-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: opensuse-deployment
+  template:
+    metadata:
+      labels:
+        app: opensuse-deployment
+    spec:
+      containers:
+      - name: opensuse
+        image: registry.opensuse.org/opensuse/bci/bci-ci:3
+        # Create a while loop to continually run sleep and ls.
+        # This helps detect two groups of processes in this test:
+        # 1. process snapshot (bash)
+        # 2. process events (sleep and ls).
+        command: ["bash", "-c", "while true; do sleep 5; ls; done"]
+EOF
 
 # wait for the pod to be ready
 kubectl wait --for=condition=Ready pod -l app=opensuse-deployment --timeout=300s
@@ -178,6 +203,7 @@ spec:
     opensuse:
       executables:
         allowed:
+        - /usr/bin/bash
         - /usr/bin/ls
         - /usr/bin/sleep
   selector:
@@ -189,9 +215,9 @@ spec:
 Notes on this proposal:
 
 * The proposal includes a list of observed executables for the `opensuse`
-  container. As expected, it captured the `ls` and `sleep` commands.
+  container. As expected, it captured the `bash`, `ls` and `sleep` commands.
 * As the name suggests, this is only a proposal and not a definitive policy yet,
-  so nothing is enforced at this stage. To enforce it, we will create a
+  so nothing is enforced at this stage. To enforce it, create a
   `WorkloadPolicy`.
 * This proposal is tied to a specific workload. Its name is always in the form
   of `<workload-type>-<workload-name>`. There is also an owner reference to the
@@ -202,19 +228,18 @@ Notes on this proposal:
 
 This proposal looks reasonable for the Deployment, so the next step is
 converting it into a definitive policy. To do that, label the
-`WorkloadPolicyProposal` with the `security.rancher.io/policy-ready` label set
-to `true`.
+`WorkloadPolicyProposal` with `security.rancher.io/promote=monitor`.
 
 [source,bash]
 ----
-kubectl label workloadpolicyproposals.security.rancher.io deploy-opensuse-deployment security.rancher.io/policy-ready=true
+kubectl label workloadpolicyproposals.security.rancher.io deploy-opensuse-deployment security.rancher.io/promote=monitor
 ----
 
 You can also use the kubectl plugin to perform the same step:
 
 [source,bash]
 ----
-kubectl runtime-enforcer proposal promote deploy-opensuse-deployment
+kubectl runtime-enforcer proposal promote deploy-opensuse-deployment --mode monitor
 ----
 
 After a few seconds, you should see a new Custom Resource called
@@ -230,34 +255,30 @@ kubectl get workloadpolicy.security.rancher.io deploy-opensuse-deployment -o yam
 apiVersion: security.rancher.io/v1alpha1
 kind: WorkloadPolicy
 metadata:
+  labels:
+    security.rancher.io/promoted-from: deploy-opensuse-deployment
   name: deploy-opensuse-deployment
   namespace: default
-  ownerReferences:
-  - apiVersion: security.rancher.io/v1alpha1
-    blockOwnerDeletion: true
-    controller: true
-    kind: WorkloadPolicyProposal
-    name: deploy-opensuse-deployment
-    uid: 3dcb1758-cbde-4523-bbbf-4170758aa1dd
-  uid: 394449cb-db06-4a15-aec0-6274d1f34d8e
 spec:
   mode: monitor
   rulesByContainer:
     opensuse:
       executables:
         allowed:
-        - /usr/bin/ls
+        - /usr/bin/bash
         - /usr/bin/sleep
-  selector:
-    matchLabels:
-      app: opensuse-deployment
+        - /usr/bin/ls
 ----
 
 The syntax is similar to the proposal, but there is one important
 difference: the `spec.mode: monitor` field. `monitor` is a passive mode:
 violations of the executable list are reported but not blocked. This means that
-if a process other than `ls` or `sleep` is executed, it's reported as an
-OTEL event, but it won't be blocked.
+if a process other than `bash`, `ls`, or `sleep` is executed, it's reported as
+an OTEL event, but it isn't blocked.
+Here the proposal is promoted in `monitor` mode but you can
+promote a proposal directly in `protect` mode. In that case the enforcement
+is applied immediately, blocking any disallowed executables from running.
+See the `protect` mode section for details.
 
 [NOTE]
 ====
@@ -269,7 +290,7 @@ phase] and xref:../phases.adoc#protect-phase[Protect phase] for details.
 
 Converting a proposal into a policy isn't enough to apply it to a workload: the
 workload needs to bind itself to the policy. This is done by adding a label to
-the workload pods. Since we are using a Deployment, the correct approach is to
+the workload pods. Since this example uses a Deployment, the correct approach is to
 add the label to the Deployment's pod template.
 
 [WARNING]
@@ -337,22 +358,32 @@ controller's next sync tick (up to 30 seconds), you can inspect them with
 
 [source,bash]
 ----
-kubectl describe workloadpolicy.security.rancher.io deploy-opensuse-deployment -n default
+kubectl get workloadpolicy.security.rancher.io deploy-opensuse-deployment -o yaml
 ----
 
 In the output, look for the `Violations` section under `Status`:
 
 [source,yaml]
 ----
-Status:
-  Violations:
-  - timestamp: "2026-01-14T10:39:01Z"
-    podName: opensuse-deployment-f69df6b94-7s7f4
+status:
+  activeViolationCount: 1
+  violationCount: 1
+  violations:
+  - action: monitor
     containerName: opensuse
     executablePath: /usr/bin/ps
-    nodeName: node-1
-    action: monitor
+    id: 0
+    nodeName: kind-control-plane
+    podName: opensuse-deployment-f69df6b94-7s7f4
+    timestamp: "2026-01-14T10:39:01Z"
+    workloadKind: Deployment
+    workloadName: opensuse-deployment
 ----
+
+- `violationCount` is the total number of violations that have occurred for this policy; it is a historical count.
+- `activeViolationCount` is the number of currently active violations for this policy.
+
+At this point, both are 1 because a single violation has been recorded.
 
 [NOTE]
 ====
@@ -361,6 +392,52 @@ periodic status sync and stores the most recent 100 entries in the
 WorkloadPolicy status. No external observability stack is required to view
 violations.
 ====
+
+== Add a binary to the allowed list
+
+Now suppose `ps` is an allowed binary and you want to add it to the allowed
+list and clear the violation. You can use the kubectl plugin to add the binary,
+and the violations should be updated automatically by Runtime-Enforcer.
+
+[source,bash]
+----
+kubectl runtime-enforcer policy allow deploy-opensuse-deployment opensuse /usr/bin/ps
+----
+
+Looking at the resource again shows that the violation has been cleared:
+
+[source,bash]
+----
+kubectl get workloadpolicy.security.rancher.io deploy-opensuse-deployment -o yaml
+----
+
+[source,yaml]
+----
+apiVersion: security.rancher.io/v1alpha1
+kind: WorkloadPolicy
+metadata:
+  labels:
+    security.rancher.io/promoted-from: deploy-opensuse-deployment
+  name: deploy-opensuse-deployment
+  namespace: default
+spec:
+  mode: monitor
+  rulesByContainer:
+    opensuse:
+      executables:
+        allowed:
+        - /usr/bin/bash
+        - /usr/bin/sleep
+        - /usr/bin/ls
+        - /usr/bin/ps
+status:
+  activeViolationCount: 0
+  violationCount: 1
+----
+
+- `/usr/bin/ps` is now part of the allowed list
+- `violationCount` is still 1 since it is a historical count
+- `activeViolationCount` is now 0 since the violation has been cleared.
 
 == WorkloadPolicy (protect mode)
 
@@ -379,26 +456,26 @@ You can also use the kubectl plugin to perform the same step:
 kubectl runtime-enforcer policy protect deploy-opensuse-deployment -n default
 ----
 
-Now try again an allowed binary, nothing should be reported.
+Now run an allowed binary again; nothing should be reported.
 
 [source,bash]
 ----
 kubectl exec -n default deployment/opensuse-deployment -- ls
 ----
 
-This time, if running a not permitted binary, you should see not only a report
+This time, if you run a non-permitted binary, you should see not only a report
 but also the process being blocked.
 
 [source,bash]
 ----
-kubectl exec -n default deployment/opensuse-deployment -- ps
+kubectl exec -n default deployment/opensuse-deployment -- cat /etc/os-release
 ----
 
 The terminal tells us the process is blocked with `EPERM`.
 
 [source,txt]
 ----
-exec /usr/bin/ps: operation not permitted
+exec /usr/bin/cat: operation not permitted
 command terminated with exit code 255
 ----
 
@@ -406,8 +483,63 @@ And there is a log entry for it:
 
 [source,txt]
 ----
-protect 37298bcde8726ade2516b5d3c63aa663 cb28aa0b03259160 evt.time=2026-01-14T10:49:11Z evt.rawtime=1768387751471907924 policy.name=deploy-opensuse-deployment k8s.ns.name=default k8s.workload.name=opensuse-deployment k8s.workload.kind=Deployment k8s.pod.name=opensuse-deployment-f69df6b94-7s7f4 container.full_id=2f6eb089830e2c281551274e8d0e94bdb182a5444fc1a4ab7316f33dff8a5017 container.name=opensuse proc.exepath=/usr/bin/ps action=protect
+protect 37298bcde8726ade2516b5d3c63aa663 cb28aa0b03259160 evt.time=2026-01-14T10:49:11Z evt.rawtime=1768387751471907924 policy.name=deploy-opensuse-deployment k8s.ns.name=default k8s.workload.name=opensuse-deployment k8s.workload.kind=Deployment k8s.pod.name=opensuse-deployment-f69df6b94-7s7f4 container.full_id=2f6eb089830e2c281551274e8d0e94bdb182a5444fc1a4ab7316f33dff8a5017 container.name=opensuse proc.exepath=/usr/bin/cat action=protect
 ----
+
+Looking at the status shows that a new violation has been detected.
+
+[source,yaml]
+----
+status:
+  activeViolationCount: 1
+  violationCount: 2
+  violations:
+  - action: protect
+    containerName: opensuse
+    executablePath: /usr/bin/cat
+    id: 1
+    nodeName: kind-control-plane
+    podName: opensuse-deployment-f69df6b94-7s7f4
+    timestamp: "2026-01-14T10:49:11Z"
+    workloadKind: Deployment
+    workloadName: opensuse-deployment
+----
+
+== Acknowledge a violation
+
+Assume the `cat` violation was due to a debugging session and now it needs to be marked as resolved. You can add an acknowledgment for this violation; the most
+intuitive way is to use the kubectl plugin.
+
+[source,bash]
+----
+kubectl runtime-enforcer policy ack deploy-opensuse-deployment 1 --reason "inspect OS release during debugging"
+----
+
+The reason of the acknowledgment can be provided through the `--reason` flag.
+The status should change as follows:
+
+[source,yaml]
+----
+status:
+  acknowledgedViolations:
+  - acknowledgedAt: "2026-01-14T10:50:03Z"
+    reason: inspect OS release during debugging
+    violation:
+      action: protect
+      containerName: opensuse
+      executablePath: /usr/bin/cat
+      id: 1
+      nodeName: kind-control-plane
+      podName: opensuse-deployment-f69df6b94-7s7f4
+      timestamp: "2026-01-14T10:49:11Z"
+      workloadKind: Deployment
+      workloadName: opensuse-deployment
+  activeViolationCount: 0
+  violationCount: 2
+----
+
+The active violation is no longer listed. Instead, it appears under
+`acknowledgedViolations`.
 
 == Advanced Configuration
 

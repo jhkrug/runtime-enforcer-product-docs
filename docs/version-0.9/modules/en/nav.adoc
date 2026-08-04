@@ -14,6 +14,7 @@
 ** kubectl Plugin Commands
 *** xref:kubectl-plugin/runtime-enforcer.adoc[runtime-enforcer]
 *** xref:kubectl-plugin/runtime-enforcer_policy.adoc[runtime-enforcer policy]
+**** xref:kubectl-plugin/runtime-enforcer_policy_ack.adoc[policy ack]
 **** xref:kubectl-plugin/runtime-enforcer_policy_allow.adoc[policy allow]
 **** xref:kubectl-plugin/runtime-enforcer_policy_deny.adoc[policy deny]
 **** xref:kubectl-plugin/runtime-enforcer_policy_monitor.adoc[policy monitor]

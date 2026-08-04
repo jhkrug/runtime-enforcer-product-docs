@@ -41,8 +41,8 @@ Operationally, if you want complete proposals, enable learning first and then
 ** No per-workload configuration is required to start generating proposals
    (proposals are created as exec events are observed).
 * *Leave*
-** Mark the corresponding proposal as ready by setting the label:
-   `security.rancher.io/policy-ready=true`
+** Promote the corresponding proposal by setting the label:
+   `security.rancher.io/promote=<monitor|protect>`
 ** Alternatively, use the kubectl plugin: `kubectl runtime-enforcer proposal
    promote <PROPOSAL_NAME>`.
 ** This triggers creation of a `WorkloadPolicy` (defaulting to `mode: monitor`),
@@ -56,7 +56,7 @@ Operationally, if you want complete proposals, enable learning first and then
 [NOTE]
 ====
 If you create a `WorkloadPolicy` manually without that promotion relationship
-(no `security.rancher.io/policy-ready` label created in
+(no `security.rancher.io/promote` label created in
 `WorkloadPolicyProposal`), the proposal *isn't* removed by that flow. You must
 delete the `WorkloadPolicyProposal` manually.
 ====
@@ -118,7 +118,7 @@ protections ready. To enable fail-open behavior, set `agent.nriFailopen=true`.
    protect` (or `kubectl runtime-enforcer policy protect <POLICY_NAME>`).
 ** *Monitor → Learn*: remove the binding label from workloads/pods, delete the
    `WorkloadPolicy`, then delete the existing `WorkloadPolicyProposal`, or set
-   `security.rancher.io/policy-ready=false` on the proposal to resume learning.
+   remove the `security.rancher.io/promote` label from the proposal to resume learning.
 
 === CRDs created/updated during this phase
 
@@ -164,7 +164,7 @@ unenforced.
    monitor` (or `kubectl runtime-enforcer policy monitor <POLICY_NAME>`).
 ** *Protect → Learn*: remove the binding label from workloads/pods, delete the
    `WorkloadPolicy`, then delete the existing `WorkloadPolicyProposal`, or set
-   `security.rancher.io/policy-ready=false` on the proposal to resume learning.
+   remove the `security.rancher.io/promote` label from the proposal to resume learning.
 
 === CRDs created/updated during this phase
 
