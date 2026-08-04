@@ -142,7 +142,32 @@ Let's create a fresh new openSUSE Deployment.
 
 [source,bash]
 ----
-kubectl apply -f https://raw.githubusercontent.com/rancher-sandbox/runtime-enforcer/main/docs/yaml/opensuse-deployment.yaml
+kubectl apply -f - <<EOF
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opensuse-deployment
+  labels:
+    app: opensuse-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: opensuse-deployment
+  template:
+    metadata:
+      labels:
+        app: opensuse-deployment
+    spec:
+      containers:
+      - name: opensuse
+        image: registry.opensuse.org/opensuse/bci/bci-ci:3
+        # Create a while loop to continually run sleep and ls.
+        # This helps detect two groups of processes in this test:
+        # 1. process snapshot (bash)
+        # 2. process events (sleep and ls).
+        command: ["bash", "-c", "while true; do sleep 5; ls; done"]
+EOF
 
 # wait for the pod to be ready
 kubectl wait --for=condition=Ready pod -l app=opensuse-deployment --timeout=300s
