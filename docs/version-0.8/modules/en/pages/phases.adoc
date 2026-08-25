@@ -108,9 +108,12 @@ is prohibited.
 
 [WARNING]
 ====
-By default in the runtime-enforcer Helm chart, pods with a non-existing policy
-are prevented from running. This ensures that when a pod starts, it has all
-protections ready. To enable fail-open behavior, set `agent.nriFailopen=true`.
+By default in the runtime-enforcer Helm chart, pods that reference a
+non-existing policy through the `security.rancher.io/policy` label are
+prevented from running. This ensures that when a pod starts, it has all
+protections ready. Workloads and pods without the `security.rancher.io/policy`
+label are not affected by this behavior and keep running as usual.
+To enable fail-open behavior, set `agent.nriFailopen=true`.
 ====
 
 * *Leave*
