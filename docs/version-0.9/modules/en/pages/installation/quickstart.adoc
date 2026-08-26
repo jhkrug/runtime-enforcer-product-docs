@@ -300,13 +300,6 @@ Changing this label on a running Pod (adding, removing, or modifying its value)
 is prohibited.
 ====
 
-[WARNING]
-====
-By default in the runtime-enforcer Helm chart, pods with a non-existing policy
-are prevented from running. This ensures that when a pod starts, it has all
-protections ready. To enable fail-open behavior, set `agent.nriFailopen=true`.
-====
-
 [source,bash]
 ----
 kubectl patch deployment opensuse-deployment --type=merge -p '{"spec":{"template":{"metadata":{"labels":{"security.rancher.io/policy":"deploy-opensuse-deployment"}}}}}'
