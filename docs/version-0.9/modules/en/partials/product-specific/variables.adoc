@@ -1,1 +1,1 @@
-:runtime-enforcer-helm-chart: oci://dp.apps.rancher.io/charts/suse-security-runtime-enforcer
+// Here goes version specific, product-specific shared attributes and content

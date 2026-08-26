@@ -1,0 +1,2 @@
+// Pull in version independent product specific attributes.
+include::{build-type}-specific/variables.adoc[]

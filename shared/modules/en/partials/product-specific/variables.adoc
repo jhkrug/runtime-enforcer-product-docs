@@ -1,0 +1,3 @@
+// Version independent shared attributes for the product-specific version.
+
+:runtime-enforcer-helm-chart: oci://dp.apps.rancher.io/charts/suse-security-runtime-enforcer
