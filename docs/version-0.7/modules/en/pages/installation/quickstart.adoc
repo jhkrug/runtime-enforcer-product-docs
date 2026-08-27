@@ -1,3 +1,5 @@
+include::partial$variables.adoc[]
+
 = Runtime-Enforcer Quick Start
 :revdate: 2026-07-08
 :page-revdate: {revdate}
@@ -73,9 +75,9 @@ Follow these simple steps from your local machine to get Runtime-Enforcer up and
 Runtime-Enforcer ships with a standalone OTEL collector Deployment that handles violation metrics and events forwarding.
 No external OpenTelemetry Collector is needed for a basic setup.
 
-[source,bash]
+[subs="+attributes",console]
 ----
-helm repo add runtime-enforcer https://rancher-sandbox.github.io/runtime-enforcer/
+helm repo add runtime-enforcer {runtime-enforcer-helm-chart}
 helm repo update
 helm install runtime-enforcer runtime-enforcer/runtime-enforcer \
   --namespace runtime-enforcer \

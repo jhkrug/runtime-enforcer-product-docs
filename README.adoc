@@ -6,9 +6,9 @@ SUSE product documentation for Runtime Enforcer, authored with https://antora.or
 
 All version need an identical structure. To create a new version, copy the
 `version-0.7` directory to say, `version-0.8` and update the `antora.yml` file
-to reflect the new version. The latest `antora.yml` would generally contain a
-prerelease tag, you would want to remove that from the version just copied. So,
-that becomes the release.
+to reflect the new version. The latest `antora.yml` contains a prerelease tag,
+you would want to remove that from the version just copied. So, that becomes the
+release.
 
 [source]
 ----
@@ -19,14 +19,31 @@ docs/
     modules/en/
       nav.adoc                 # navigation tree
       pages/                   # AsciiDoc pages (source of the docs)
+      product-specific/        # product-specific AsciiDoc pages
       images/                  # image assets
       partials/                # reusable AsciiDoc partials
+shared/
+  partials/                    # reusable AsciiDoc partials
+    product-specific/
 ----
+
+The `partials` directory in each version has reusable shared material, specific
+to that version. The `variables.adoc` has attribute definitions for that version
+and includes the `variables.adoc` file from the shared area for attributes and
+shared content that does not change between versions.
+
+The `version-x/modules/en/product-specific` directory is for product-specific
+content, which is not shared with community documentation. The
+`shared/partials/product-specific` directory is for product-specific partials,
+which are not shared with community.
 
 == Development
 
-* Fork your own copy of `git@github.com/rancher/runtime-enforcer-product-docs.git`, if intending to contribute.
-* `git clone --recurse-submodules git@github.com/<your-gh-handle>/runtime-enforcer-product-docs.git`
+* Fork your own copy of
+  `git@github.com/rancher/runtime-enforcer-product-docs.git`, if intending to
+  contribute.
+* `git clone --recurse-submodules
+  git@github.com/<your-gh-handle>/runtime-enforcer-product-docs.git`
 
 == Building locally
 
@@ -41,4 +58,4 @@ make preview
 ----
 
 The generated site is in `build/site`. A build log is in `tmp`. Check for error,
-warning and info messsages.
+warning and info messages.
